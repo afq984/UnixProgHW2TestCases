@@ -1069,11 +1069,23 @@ TEST_F(Remove, Root) {
     EXPECT_ERRNO(ESBX, -1, remove("/"));
 }
 
+TEST_F(Remove, DoesNotExist) {
+    EXPECT_ERRNO(ENOENT, -1, remove("does-not-exist"));
+}
+
+TEST_F(Remove, DoesNotExistOutside) {
+    EXPECT_ERRNO(ESBXNOENT, -1, remove("/does/not/exist"));
+}
+
 class Rename : public SandboxTest {};
 
 TEST_F(Rename, File) {
     EXPECT_ERRNO(0, 0, rename("f0", "x"));
     EXPECT_ERRNO(0, 0, libc_unlink("x"));
+}
+
+TEST_F(Rename, ToNowhere) {
+    EXPECT_ERRNO(ENOENT, -1, rename("f0", "does-not-exist/f0"));
 }
 
 TEST_F(Rename, FileInDir) {
@@ -1113,7 +1125,7 @@ TEST_F(Rename, FromOutSideDoesNotExist) {
     EXPECT_ERRNO(ESBXNOENT, -1, rename("/does/not/exist", "x"));
 }
 
-class Rmdir: public SandboxTest {};
+class Rmdir : public SandboxTest {};
 
 TEST_F(Rmdir, File) {
     EXPECT_ERRNO(ENOTDIR, -1, rmdir("f0"));
