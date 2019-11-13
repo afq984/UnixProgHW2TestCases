@@ -15,5 +15,5 @@ Run `ninja` in this directory
 # Run
 
 1. Create an empty directory and cd into it
-2. ``../path/to/hw2 -d ../path/to/sandbox.so ../path/to/test``
-3. ``../path/to/hw2 -d ../path/to/sandbox.so ../path/to/test64``
+2. ``../path/to/hw2 -p ../path/to/sandbox.so ../path/to/test``
+3. ``../path/to/hw2 -p ../path/to/sandbox.so ../path/to/test64``
