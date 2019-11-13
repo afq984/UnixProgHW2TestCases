@@ -934,51 +934,59 @@ TEST_F(Opendir, CWD) {
 }
 
 TEST_F(Opendir, ChildDir) {
-    EXPECT_OK((DIR*)nullptr, d = opendir("dhasfile"));
+    EXPECT_OK((DIR *)nullptr, d = opendir("dhasfile"));
 }
 
 TEST_F(Opendir, LinkChildDir) {
-    EXPECT_OK((DIR*)nullptr, d = opendir("ldhasfile"));
+    EXPECT_OK((DIR *)nullptr, d = opendir("ldhasfile"));
 }
 
 TEST_F(Opendir, ChildDirParent) {
-    EXPECT_OK((DIR*)nullptr, d = opendir("dhasfile/.."));
+    EXPECT_OK((DIR *)nullptr, d = opendir("dhasfile/.."));
 }
 
 TEST_F(Opendir, WithSlash) {
-    EXPECT_OK((DIR*)nullptr, d = opendir("./"));
+    EXPECT_OK((DIR *)nullptr, d = opendir("./"));
 }
 
 TEST_F(Opendir, NotADir) {
-    EXPECT_ERRNO(ENOTDIR, (DIR*)nullptr, opendir("f0"));
+    EXPECT_ERRNO(ENOTDIR, (DIR *)nullptr, opendir("f0"));
 }
 
 TEST_F(Opendir, NotADirSlash) {
-    EXPECT_ERRNO(ENOTDIR, (DIR*)nullptr, opendir("f0/"));
+    EXPECT_ERRNO(ENOTDIR, (DIR *)nullptr, opendir("f0/"));
 }
 
 TEST_F(Opendir, Root) {
-    EXPECT_ERRNO(ESBX, (DIR*)nullptr, opendir("/"));
+    EXPECT_ERRNO(ESBX, (DIR *)nullptr, opendir("/"));
 }
 
 TEST_F(Opendir, DoesNotExist) {
-    EXPECT_ERRNO(ENOENT, (DIR*)nullptr, opendir("does-not-exist"));
+    EXPECT_ERRNO(ENOENT, (DIR *)nullptr, opendir("does-not-exist"));
 }
 
 TEST_F(Opendir, LinkDoesNotExist) {
-    EXPECT_ERRNO(ENOENT, (DIR*)nullptr, opendir("lx"));
+    EXPECT_ERRNO(ENOENT, (DIR *)nullptr, opendir("lx"));
 }
 
 TEST_F(Opendir, LinkOutsideDir) {
-    EXPECT_ERRNO(ESBX, (DIR*)nullptr, opendir("lroot"));
+    EXPECT_ERRNO(ESBX, (DIR *)nullptr, opendir("lroot"));
 }
 
 TEST_F(Opendir, LinkOutsideFile) {
-    EXPECT_ERRNO(ESBX, (DIR*)nullptr, opendir("lsh"));
+    EXPECT_ERRNO(ESBX, (DIR *)nullptr, opendir("lsh"));
 }
 
 TEST_F(Opendir, LinkOutsideDoesNotExist) {
-    EXPECT_ERRNO(ESBXNOENT, (DIR*)nullptr, opendir("ltmp"));
+    EXPECT_ERRNO(ESBXNOENT, (DIR *)nullptr, opendir("ltmp"));
+}
+
+class Readlink : public SandboxTest {};
+
+TEST_F(Readlink, ActualLink) {
+    char buf[PATH_MAX];
+    EXPECT_ERRNO(0, 2, readlink("l0", buf, PATH_MAX));
+    EXPECT_EQ("f0", std::string(buf, 2));
 }
 
 class Exec : public SandboxTest {};
