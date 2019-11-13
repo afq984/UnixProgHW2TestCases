@@ -1113,6 +1113,49 @@ TEST_F(Rename, FromOutSideDoesNotExist) {
     EXPECT_ERRNO(ESBXNOENT, -1, rename("/does/not/exist", "x"));
 }
 
+class Rmdir: public SandboxTest {};
+
+TEST_F(Rmdir, File) {
+    EXPECT_ERRNO(ENOTDIR, -1, rmdir("f0"));
+}
+
+TEST_F(Rmdir, Directory) {
+    EXPECT_ERRNO(0, 0, rmdir("dempty"));
+    EXPECT_ERRNO(ENOENT, -1, libc_rmdir("dempty"));
+}
+
+TEST_F(Rmdir, DirectoryNotEmpty) {
+    EXPECT_ERRNO(ENOTEMPTY, -1, rmdir("dhasfile"));
+}
+
+TEST_F(Rmdir, LinkToFile) {
+    EXPECT_ERRNO(ENOTDIR, -1, rmdir("l0"));
+}
+
+TEST_F(Rmdir, LinkToDirectory) {
+    EXPECT_ERRNO(ENOTDIR, -1, rmdir("ldhasfile"));
+}
+
+TEST_F(Rmdir, LinkToRoot) {
+    EXPECT_ERRNO(ENOTDIR, -1, rmdir("lroot"));
+}
+
+TEST_F(Rmdir, LinkToBinSh) {
+    EXPECT_ERRNO(ENOTDIR, -1, rmdir("lsh"));
+}
+
+TEST_F(Rmdir, Root) {
+    EXPECT_ERRNO(ESBX, -1, rmdir("/"));
+}
+
+TEST_F(Rmdir, DoesNotExist) {
+    EXPECT_ERRNO(ENOENT, -1, rmdir("does-not-exist"));
+}
+
+TEST_F(Rmdir, OutsideDoesNotExist) {
+    EXPECT_ERRNO(ESBXNOENT, -1, rmdir("/does/not/exist"));
+}
+
 class Exec : public SandboxTest {};
 
 char fail_msg[] = "ERROR: EXEC BYPASSED SANDBOX";
