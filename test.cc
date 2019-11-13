@@ -1,3 +1,4 @@
+#include <dirent.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -911,6 +912,73 @@ TEST_F(OpenAtSubDirR, LinkOutsideDoesNotExistTmp) {
 
 TEST_F(OpenAtSubDirR, LinkOutsideDoesNotExistTmp2) {
     EXPECT_ERRNO(ESBXNOENT, -1, openat(at_subd, "../ltmp2", O_RDONLY));
+}
+
+class Opendir : public SandboxTest {
+  protected:
+    DIR *d;
+    void SetUp() override {
+        SandboxTest::SetUp();
+        d = 0;
+    }
+    void TearDown() override {
+        SandboxTest::TearDown();
+        if (d) {
+            closedir(d);
+        }
+    }
+};
+
+TEST_F(Opendir, CWD) {
+    EXPECT_OK((DIR *)nullptr, d = opendir("."));
+}
+
+TEST_F(Opendir, ChildDir) {
+    EXPECT_OK((DIR*)nullptr, d = opendir("dhasfile"));
+}
+
+TEST_F(Opendir, LinkChildDir) {
+    EXPECT_OK((DIR*)nullptr, d = opendir("ldhasfile"));
+}
+
+TEST_F(Opendir, ChildDirParent) {
+    EXPECT_OK((DIR*)nullptr, d = opendir("dhasfile/.."));
+}
+
+TEST_F(Opendir, WithSlash) {
+    EXPECT_OK((DIR*)nullptr, d = opendir("./"));
+}
+
+TEST_F(Opendir, NotADir) {
+    EXPECT_ERRNO(ENOTDIR, (DIR*)nullptr, opendir("f0"));
+}
+
+TEST_F(Opendir, NotADirSlash) {
+    EXPECT_ERRNO(ENOTDIR, (DIR*)nullptr, opendir("f0/"));
+}
+
+TEST_F(Opendir, Root) {
+    EXPECT_ERRNO(ESBX, (DIR*)nullptr, opendir("/"));
+}
+
+TEST_F(Opendir, DoesNotExist) {
+    EXPECT_ERRNO(ENOENT, (DIR*)nullptr, opendir("does-not-exist"));
+}
+
+TEST_F(Opendir, LinkDoesNotExist) {
+    EXPECT_ERRNO(ENOENT, (DIR*)nullptr, opendir("lx"));
+}
+
+TEST_F(Opendir, LinkOutsideDir) {
+    EXPECT_ERRNO(ESBX, (DIR*)nullptr, opendir("lroot"));
+}
+
+TEST_F(Opendir, LinkOutsideFile) {
+    EXPECT_ERRNO(ESBX, (DIR*)nullptr, opendir("lsh"));
+}
+
+TEST_F(Opendir, LinkOutsideDoesNotExist) {
+    EXPECT_ERRNO(ESBXNOENT, (DIR*)nullptr, opendir("ltmp"));
 }
 
 class Exec : public SandboxTest {};
