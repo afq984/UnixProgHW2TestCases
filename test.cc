@@ -334,7 +334,7 @@ TEST_F(CreatW, LinkExists) {
 }
 
 TEST_F(CreatW, Outside) {
-    EXPECT_ERRNO(ESBX, -1, creat("/tmp/creat-outside", 0644));
+    EXPECT_ERRNO(ESBX, -1, creat(mktemp(strdupa("/tmp/creatXXXXXX")), 0644));
 }
 
 TEST_F(CreatW, OutsideDir) {
@@ -382,7 +382,7 @@ TEST_F(FopenW, LinkExists) {
 }
 
 TEST_F(FopenW, Outside) {
-    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("/tmp/fopen-outside", "w"));
+    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen(mktemp(strdupa("/tmp/fopenXXXXXX")), "w"));
 }
 
 TEST_F(FopenW, OutsideDir) {
