@@ -16,6 +16,8 @@
 // the errno the sandbox should set when denying function calls
 const int ESBX = EACCES;
 
+char basedir[PATH_MAX];
+
 std::runtime_error rtef(const char *fmt, ...) {
     char *errcstr;
     va_list ap;
@@ -72,10 +74,8 @@ libc_decl(remove);
 
 class SandboxTest : public ::testing::Test {
   protected:
-    char basedir[PATH_MAX];
-
     void SetUp() override {
-        ASSERT_TRUE(libc_getcwd(basedir, PATH_MAX));
+        ASSERT_EQ(0, libc_chdir(basedir));
         int fd;
         ASSERT_NE(-1, fd = libc_open("f0", O_WRONLY | O_CREAT | O_EXCL, 0644));
         ASSERT_EQ(2, libc_write(fd, "a\n", 2));
@@ -108,7 +108,7 @@ class SandboxTest : public ::testing::Test {
     }
 
     void TearDown() override {
-        EXPECT_MAYBE_ERRNO(ENOENT, libc_chdir(basedir));
+        ASSERT_EQ(0, libc_chdir(basedir));
         EXPECT_MAYBE_ERRNO(ENOENT, libc_unlink("f0"));
         EXPECT_MAYBE_ERRNO(ENOENT, libc_rmdir("dempty"));
         EXPECT_MAYBE_ERRNO(ENOENT, libc_unlink("dhasfile/f1"));
@@ -693,11 +693,10 @@ class OpenAtTestRoot : public SandboxTest {
   protected:
     int at_troot;
 
-  public:
     void SetUp() override {
         SandboxTest::SetUp();
         EXPECT_OK(-1, at_troot = libc_open(basedir, O_RDONLY));
-        EXPECT_OK(-1, libc_chdir("dhasfile"));
+        EXPECT_OK(-1, libc_chdir("/"));
     }
     void TearDown() override {
         SandboxTest::TearDown();
@@ -805,7 +804,6 @@ class OpenAtSubDir : public SandboxTest {
   protected:
     int at_subd;
 
-  public:
     void SetUp() override {
         SandboxTest::SetUp();
         EXPECT_OK(-1, at_subd = libc_open("dhasfile", O_RDONLY));
@@ -932,4 +930,12 @@ TEST_F(Exec, Execvp) {
 
 TEST_F(Exec, System) {
     EXPECT_ERRNO(ESBX, -1, system("echo ERROR: EXEC BYPASSED SANDBOX"));
+}
+
+int main(int argc, char **argv) {
+    if (!getcwd(basedir, PATH_MAX)) {
+        throw rtef("getcwd() failed: %s", strerror(errno));
+    }
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

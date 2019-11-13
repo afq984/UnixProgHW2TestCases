@@ -1,5 +1,5 @@
 cxx = g++
-cxxflags = -std=c++17 -lgtest -lgtest_main -ldl
+cxxflags = -std=c++17 -lgtest -ldl
 
 rule compile
   command = $cxx -o $out $cxxflags $in
