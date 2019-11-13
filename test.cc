@@ -171,6 +171,10 @@ TEST_F(Chdir, ParentDirectory) {
     EXPECT_ERRNO(ESBX, -1, chdir(".."));
 }
 
+TEST_F(Chdir, EffectivelyParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, chdir("dempty/../.."));
+}
+
 TEST_F(Chdir, SParentDirectory) {
     EXPECT_ERRNO(ESBX, -1, chdir("l.."));
 }
@@ -247,6 +251,7 @@ TEST_F(Chmod, SInside) {
 
 TEST_F(Chmod, Outside) {
     EXPECT_ERRNO(ESBX, -1, chmod("..", 0755));
+    EXPECT_ERRNO(ESBX, -1, chmod("dempty/../..", 0755));
     EXPECT_ERRNO(ESBX, -1, chmod("/", 0755));
     EXPECT_ERRNO(ESBX, -1, chmod("/dev/null", 0755));
 }
@@ -284,6 +289,7 @@ TEST_F(Chown, SInside) {
 
 TEST_F(Chown, Outside) {
     EXPECT_ERRNO(ESBX, -1, chown("..", getuid(), getgid()));
+    EXPECT_ERRNO(ESBX, -1, chown("dempty/../..", getuid(), getgid()));
     EXPECT_ERRNO(ESBX, -1, chown("/", getuid(), getgid()));
     EXPECT_ERRNO(ESBX, -1, chown("/dev/null", getuid(), getgid()));
 }
@@ -1015,6 +1021,10 @@ TEST_F(Readlink, CWD) {
 
 TEST_F(Readlink, ParentDirectory) {
     EXPECT_ERRNO(ESBX, -1, readlink("..", buf, PATH_MAX));
+}
+
+TEST_F(Readlink, EffectivelyParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, readlink("dempty/../..", buf, PATH_MAX));
 }
 
 TEST_F(Readlink, Root) {
