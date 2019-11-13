@@ -1168,6 +1168,87 @@ TEST_F(Rmdir, OutsideDoesNotExist) {
     EXPECT_ERRNO(ESBXNOENT, -1, rmdir("/does/not/exist"));
 }
 
+class Stat : public SandboxTest {
+  protected:
+    struct stat st;
+};
+
+TEST_F(Stat, File) {
+    EXPECT_OK(-1, stat("f0", &st));
+    EXPECT_TRUE(S_ISREG(st.st_mode));
+    EXPECT_FALSE(S_ISLNK(st.st_mode));
+}
+
+TEST_F(Stat, File2) {
+    EXPECT_OK(-1, stat("dhasfile/f1", &st));
+    EXPECT_TRUE(S_ISREG(st.st_mode));
+    EXPECT_FALSE(S_ISLNK(st.st_mode));
+}
+
+TEST_F(Stat, LinkToFile) {
+    EXPECT_OK(-1, stat("l0", &st));
+    EXPECT_TRUE(S_ISREG(st.st_mode));
+    EXPECT_FALSE(S_ISLNK(st.st_mode));
+}
+
+TEST_F(Stat, LinkToFile2) {
+    EXPECT_OK(-1, stat("l1", &st));
+    EXPECT_TRUE(S_ISREG(st.st_mode));
+    EXPECT_FALSE(S_ISLNK(st.st_mode));
+}
+
+TEST_F(Stat, Directory) {
+    EXPECT_OK(-1, stat("dhasfile", &st));
+    EXPECT_TRUE(S_ISDIR(st.st_mode));
+    EXPECT_FALSE(S_ISLNK(st.st_mode));
+}
+
+TEST_F(Stat, LinkToDirectory) {
+    EXPECT_OK(-1, stat("ldhasfile", &st));
+    EXPECT_TRUE(S_ISDIR(st.st_mode));
+    EXPECT_FALSE(S_ISLNK(st.st_mode));
+}
+
+TEST_F(Stat, CWD) {
+    EXPECT_OK(-1, stat(".", &st));
+    EXPECT_TRUE(S_ISDIR(st.st_mode));
+    EXPECT_FALSE(S_ISLNK(st.st_mode));
+}
+
+TEST_F(Stat, RelativeCWD) {
+    EXPECT_OK(-1, stat("dempty/..", &st));
+    EXPECT_TRUE(S_ISDIR(st.st_mode));
+    EXPECT_FALSE(S_ISLNK(st.st_mode));
+}
+
+TEST_F(Stat, Outside) {
+    EXPECT_ERRNO(ESBX, -1, stat("/dev/null", &st));
+}
+
+TEST_F(Stat, LinkOutsideExists) {
+    EXPECT_ERRNO(ESBX, -1, stat("lsh", &st));
+}
+
+TEST_F(Stat, LinkOutsideDoesNotExist) {
+    EXPECT_ERRNO(ESBXNOENT, -1, stat("loutbroken", &st));
+}
+
+TEST_F(Stat, DoesNotExist) {
+    EXPECT_ERRNO(ENOENT, -1, stat("x", &st));
+}
+
+TEST_F(Stat, NormalOperationOnLink) {
+    EXPECT_ERRNO(ENOENT, -1, stat("lx", &st));
+}
+
+TEST_F(Stat, LinkOutsideDoesNotExistTmp) {
+    EXPECT_ERRNO(ESBXNOENT, -1, stat("ltmp", &st));
+}
+
+TEST_F(Stat, LinkOutsideDoesNotExistTmp2) {
+    EXPECT_ERRNO(ESBXNOENT, -1, stat("ltmp2", &st));
+}
+
 class Unlink : public SandboxTest {};
 
 TEST_F(Unlink, File) {
