@@ -1249,6 +1249,93 @@ TEST_F(Stat, LinkOutsideDoesNotExistTmp2) {
     EXPECT_ERRNO(ESBXNOENT, -1, stat("ltmp2", &st));
 }
 
+class Symlink : public SandboxTest {};
+
+TEST_F(Symlink, FromFile) {
+    EXPECT_ERRNO(0, 0, symlink("f0", "x"));
+}
+
+TEST_F(Symlink, FromDirectory) {
+    EXPECT_ERRNO(0, 0, symlink("dhasfile", "x"));
+}
+
+TEST_F(Symlink, FromEmptyString) {
+    // symlink(2) says:
+    // ENOENT A directory component in linkpath does not exist or  is  a  dan‐
+    //        gling symbolic link, or target or linkpath is an empty string.
+    // meanwhile...
+    // symlink(3P) says:
+    // The string pointed to by path1 shall be treated  only  as  a  character
+    // string and shall not be validated as a pathname.
+    // See also:
+    // https://lwn.net/Articles/551224/
+    EXPECT_ERRNO(ENOENT, -1, symlink("", "x"));
+}
+
+TEST_F(Symlink, FromCWD) {
+    EXPECT_ERRNO(0, 0, symlink(".", "x"));
+}
+
+TEST_F(Symlink, FromArbitaryString) {
+    EXPECT_ERRNO(
+        0, 0,
+        symlink("\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f", "x"));
+}
+
+TEST_F(Symlink, FromArbitaryStringUnderRoot) {
+    EXPECT_ERRNO(
+        0, 0,
+        symlink("/\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f", "x"));
+}
+
+TEST_F(Symlink, FromRoot) {
+    EXPECT_ERRNO(0, 0, symlink("/", "x"));
+}
+
+TEST_F(Symlink, FromParentDirectory) {
+    EXPECT_ERRNO(0, 0, symlink("..", "x"));
+}
+
+TEST_F(Symlink, FromOutSide) {
+    EXPECT_ERRNO(0, 0, symlink("/bin/sh", "x"));
+}
+
+TEST_F(Symlink, FromOutSideDoesNotExist) {
+    EXPECT_ERRNO(0, 0, symlink("/does/not/exist", "x"));
+}
+
+TEST_F(Symlink, CreatesLoop) {
+    EXPECT_ERRNO(0, 0, symlink("x", "x"));
+}
+
+TEST_F(Symlink, ToFile) {
+    EXPECT_ERRNO(EEXIST, -1, symlink("f0", "f0"));
+}
+
+TEST_F(Symlink, ToDirectory) {
+    EXPECT_ERRNO(EEXIST, -1, symlink("f0", "dempty"));
+}
+
+TEST_F(Symlink, ToSymlink) {
+    EXPECT_ERRNO(EEXIST, -1, symlink("f0", "l0"));
+}
+
+TEST_F(Symlink, ToRoot) {
+    EXPECT_ERRNO(ESBX, -1, symlink("f0", "/"));
+}
+
+TEST_F(Symlink, ToDoesNotExist) {
+    EXPECT_ERRNO(ENOENT, -1, symlink("f0", "does-not-exist/x"));
+}
+
+TEST_F(Symlink, ToDoesNotExistOutside) {
+    EXPECT_ERRNO(ESBXNOENT, -1, symlink("f0", "/does/not/exist"));
+}
+
+TEST_F(Symlink, ToTmp) {
+    EXPECT_ERRNO(ESBX, -1, symlink("f0", mktemp(strdupa("/tmp/testXXXXXX"))));
+}
+
 class Unlink : public SandboxTest {};
 
 TEST_F(Unlink, File) {
