@@ -96,6 +96,7 @@ class SandboxTest : public ::testing::Test {
         ASSERT_EQ(2, libc_write(fd, "b\n", 2));
         ASSERT_EQ(0, libc_close(fd));
 
+        ASSERT_EQ(0, libc_symlink("loop", "loop"));
         ASSERT_EQ(0, libc_symlink("f0", "l0"));
         ASSERT_EQ(0, libc_symlink("dhasfile/f1", "l1"));
         ASSERT_EQ(0, libc_symlink("dempty", "ldempty"));
@@ -121,6 +122,7 @@ class SandboxTest : public ::testing::Test {
         EXPECT_MAYBE_ERRNO(ENOENT, libc_unlink("dhasfile/f1"));
         EXPECT_MAYBE_ERRNO(ENOENT, libc_rmdir("dhasfile"));
 
+        EXPECT_MAYBE_ERRNO(ENOENT, libc_unlink("loop"));
         EXPECT_MAYBE_ERRNO(ENOENT, libc_unlink("l0"));
         EXPECT_MAYBE_ERRNO(ENOENT, libc_unlink("l1"));
         EXPECT_MAYBE_ERRNO(ENOENT, libc_unlink("ldempty"));
@@ -233,6 +235,10 @@ TEST_F(Chdir, InsideOutside) {
     EXPECT_ERRNO(ESBX, -1, chdir("../.."));
 }
 
+TEST_F(Chdir, Loop) {
+    EXPECT_ERRNO(ELOOP, -1, chdir("loop"));
+}
+
 class Chmod : public SandboxTest {};
 
 TEST_F(Chmod, Inside) {
@@ -271,6 +277,10 @@ TEST_F(Chmod, NoSuchFileOrDirectoryOutside) {
     EXPECT_ERRNO(ESBXNOENT, -1, chmod("loutbroken", 0755));
 }
 
+TEST_F(Chmod, Loop) {
+    EXPECT_ERRNO(ELOOP, -1, chmod("loop", 0755));
+}
+
 class Chown : public SandboxTest {};
 
 TEST_F(Chown, Inside) {
@@ -307,6 +317,10 @@ TEST_F(Chown, NoSuchFileOrDirectory) {
 TEST_F(Chown, NoSuchFileOrDirectoryOutside) {
     EXPECT_ERRNO(ESBXNOENT, -1, chown("/does/not/exist", getuid(), getgid()));
     EXPECT_ERRNO(ESBXNOENT, -1, chown("loutbroken", getuid(), getgid()));
+}
+
+TEST_F(Chown, Loop) {
+    EXPECT_ERRNO(ELOOP, -1, chown("loop", getuid(), getgid()));
 }
 
 class Creat : public SandboxTest {};
@@ -373,6 +387,10 @@ TEST_F(CreatW, LinkOutside) {
     EXPECT_ERRNO(ESBXNOENT, -1, creat("ltmp2", 0644));
 }
 
+TEST_F(CreatW, Loop) {
+    EXPECT_ERRNO(ELOOP, -1, creat("loop", 0644));
+}
+
 #undef CreatW
 
 class FopenW : public SandboxTest {};
@@ -437,6 +455,10 @@ TEST_F(FopenW, LinkOutsideTmpDeep) {
     EXPECT_ERRNO(ESBXNOENT, (FILE *)nullptr, fopen("ltmp2", "w"));
 }
 
+TEST_F(FopenW, Loop) {
+    EXPECT_ERRNO(ELOOP, (FILE *)nullptr, fopen("loop", "w"));
+}
+
 class FopenA : public SandboxTest {};
 
 TEST_F(FopenA, IsADirectory) {
@@ -499,6 +521,10 @@ TEST_F(FopenA, LinkOutsideTmpDeep) {
     EXPECT_ERRNO(ESBXNOENT, (FILE *)nullptr, fopen("ltmp2", "a"));
 }
 
+TEST_F(FopenA, Loop) {
+    EXPECT_ERRNO(ELOOP, (FILE *)nullptr, fopen("loop", "a"));
+}
+
 class FopenR : public SandboxTest {};
 
 TEST_F(FopenR, Exists) {
@@ -553,6 +579,10 @@ TEST_F(FopenR, LinkOutsideDoesNotExistTmp) {
 
 TEST_F(FopenR, LinkOutsideDoesNotExistTmp2) {
     EXPECT_ERRNO(ESBXNOENT, (FILE *)nullptr, fopen("ltmp2", "r"));
+}
+
+TEST_F(FopenR, Loop) {
+    EXPECT_ERRNO(ELOOP, (FILE *)nullptr, fopen("loop", "r"));
 }
 
 class Link : public SandboxTest {};
@@ -654,6 +684,10 @@ TEST_F(OpenW, LinkOutsideTmpDeep) {
     EXPECT_ERRNO(ESBXNOENT, -1, open("ltmp2", O_CREAT | O_WRONLY, 0644));
 }
 
+TEST_F(OpenW, Loop) {
+    EXPECT_ERRNO(ELOOP, -1, open("loop", O_CREAT | O_WRONLY, 0644));
+}
+
 class OpenR : public SandboxTest {};
 
 TEST_F(OpenR, Exists) {
@@ -708,6 +742,10 @@ TEST_F(OpenR, LinkOutsideDoesNotExistTmp) {
 
 TEST_F(OpenR, LinkOutsideDoesNotExistTmp2) {
     EXPECT_ERRNO(ESBXNOENT, -1, open("ltmp2", O_RDONLY));
+}
+
+TEST_F(OpenR, Loop) {
+    EXPECT_ERRNO(ELOOP, -1, open("loop", O_RDONLY));
 }
 
 class OpenAtW : public SandboxTest {};
@@ -784,6 +822,10 @@ TEST_F(OpenAtW, LinkOutsideTmpDeep) {
     EXPECT_ERRNO(ESBXNOENT, -1, openat(AT_FDCWD, "ltmp2", O_CREAT | O_WRONLY, 0644));
 }
 
+TEST_F(OpenAtW, Loop) {
+    EXPECT_ERRNO(ELOOP, -1, openat(AT_FDCWD, "loop", O_CREAT | O_WRONLY, 0644));
+}
+
 class OpenAtR : public SandboxTest {};
 
 TEST_F(OpenAtR, Exists) {
@@ -838,6 +880,10 @@ TEST_F(OpenAtR, LinkOutsideDoesNotExistTmp) {
 
 TEST_F(OpenAtR, LinkOutsideDoesNotExistTmp2) {
     EXPECT_ERRNO(ESBXNOENT, -1, openat(AT_FDCWD, "ltmp2", O_RDONLY));
+}
+
+TEST_F(OpenAtR, Loop) {
+    EXPECT_ERRNO(ELOOP, -1, openat(AT_FDCWD, "loop", O_RDONLY));
 }
 
 class OpenAtTestRoot : public SandboxTest {
@@ -927,6 +973,10 @@ TEST_F(OpenAtTestRootW, LinkOutsideTmpDeep) {
     EXPECT_ERRNO(ESBXNOENT, -1, openat(at_troot, "ltmp2", O_CREAT | O_WRONLY, 0644));
 }
 
+TEST_F(OpenAtTestRootW, Loop) {
+    EXPECT_ERRNO(ELOOP, -1, openat(at_troot, "loop", O_CREAT | O_WRONLY, 0644));
+}
+
 class OpenAtTestRootR : public OpenAtTestRoot {};
 
 TEST_F(OpenAtTestRootR, Exists) {
@@ -981,6 +1031,10 @@ TEST_F(OpenAtTestRootR, LinkOutsideDoesNotExistTmp) {
 
 TEST_F(OpenAtTestRootR, LinkOutsideDoesNotExistTmp2) {
     EXPECT_ERRNO(ESBXNOENT, -1, openat(at_troot, "ltmp2", O_RDONLY));
+}
+
+TEST_F(OpenAtTestRootR, Loop) {
+    EXPECT_ERRNO(ELOOP, -1, openat(at_troot, "loop", O_RDONLY));
 }
 
 class OpenAtSubDir : public SandboxTest {
@@ -1061,6 +1115,10 @@ TEST_F(OpenAtSubDirW, LinkOutsideTmpDeep) {
     EXPECT_ERRNO(ESBXNOENT, -1, openat(at_subd, "../ltmp2", O_CREAT | O_WRONLY, 0644));
 }
 
+TEST_F(OpenAtSubDirW, Loop) {
+    EXPECT_ERRNO(ELOOP, -1, openat(at_subd, "../loop", O_CREAT | O_WRONLY, 0644));
+}
+
 class OpenAtSubDirR : public OpenAtSubDir {};
 
 TEST_F(OpenAtSubDirR, Exists) {
@@ -1111,6 +1169,10 @@ TEST_F(OpenAtSubDirR, LinkOutsideDoesNotExistTmp) {
 
 TEST_F(OpenAtSubDirR, LinkOutsideDoesNotExistTmp2) {
     EXPECT_ERRNO(ESBXNOENT, -1, openat(at_subd, "../ltmp2", O_RDONLY));
+}
+
+TEST_F(OpenAtSubDirR, Loop) {
+    EXPECT_ERRNO(ELOOP, -1, openat(at_subd, "../loop", O_RDONLY));
 }
 
 class Opendir : public SandboxTest {
@@ -1180,6 +1242,10 @@ TEST_F(Opendir, LinkOutsideDoesNotExist) {
     EXPECT_ERRNO(ESBXNOENT, (DIR *)nullptr, opendir("ltmp"));
 }
 
+TEST_F(Opendir, Loop) {
+    EXPECT_ERRNO(ELOOP, (DIR *)nullptr, opendir("loop"));
+}
+
 class Readlink : public SandboxTest {
   protected:
     char buf[PATH_MAX];
@@ -1231,6 +1297,10 @@ TEST_F(Readlink, OutsideRelativeDoesNotExist) {
     EXPECT_ERRNO(ESBXNOENT, -1, readlink("../does/not/exist", buf, PATH_MAX));
 }
 
+TEST_F(Readlink, Loop) {
+    EXPECT_ERRNO(0, 4, readlink("loop", buf, PATH_MAX));
+}
+
 class Remove : public SandboxTest {};
 
 TEST_F(Remove, File) {
@@ -1277,6 +1347,10 @@ TEST_F(Remove, DoesNotExist) {
 
 TEST_F(Remove, DoesNotExistOutside) {
     EXPECT_ERRNO(ESBXNOENT, -1, remove("/does/not/exist"));
+}
+
+TEST_F(Remove, Loop) {
+    EXPECT_ERRNO(0, 0, remove("loop"));
 }
 
 class Rename : public SandboxTest {};
@@ -1327,6 +1401,10 @@ TEST_F(Rename, FromOutSideDoesNotExist) {
     EXPECT_ERRNO(ESBXNOENT, -1, rename("/does/not/exist", "x"));
 }
 
+TEST_F(Rename, Loop) {
+    EXPECT_ERRNO(0, 0, rename("loop", "x"));
+}
+
 class Rmdir : public SandboxTest {};
 
 TEST_F(Rmdir, File) {
@@ -1368,6 +1446,10 @@ TEST_F(Rmdir, DoesNotExist) {
 
 TEST_F(Rmdir, OutsideDoesNotExist) {
     EXPECT_ERRNO(ESBXNOENT, -1, rmdir("/does/not/exist"));
+}
+
+TEST_F(Rmdir, Loop) {
+    EXPECT_ERRNO(ENOTDIR, -1, rmdir("loop"));
 }
 
 class Stat : public SandboxTest {
@@ -1449,6 +1531,10 @@ TEST_F(Stat, LinkOutsideDoesNotExistTmp) {
 
 TEST_F(Stat, LinkOutsideDoesNotExistTmp2) {
     EXPECT_ERRNO(ESBXNOENT, -1, stat("ltmp2", &st));
+}
+
+TEST_F(Stat, Loop) {
+    EXPECT_ERRNO(ELOOP, -1, stat("loop", &st));
 }
 
 class Symlink : public SandboxTest {};
@@ -1538,6 +1624,10 @@ TEST_F(Symlink, ToTmp) {
     EXPECT_ERRNO(ESBX, -1, symlink("f0", mktemp(strdupa("/tmp/testXXXXXX"))));
 }
 
+TEST_F(Symlink, FromLoop) {
+    EXPECT_ERRNO(0, 0, symlink("loop", "x"));
+}
+
 class Unlink : public SandboxTest {};
 
 TEST_F(Unlink, File) {
@@ -1583,6 +1673,10 @@ TEST_F(Unlink, DoesNotExist) {
 
 TEST_F(Unlink, DoesNotExistOutside) {
     EXPECT_ERRNO(ESBXNOENT, -1, unlink("/does/not/exist"));
+}
+
+TEST_F(Unlink, Loop) {
+    EXPECT_ERRNO(0, 0, unlink("loop"));
 }
 
 class Exec : public SandboxTest {};
