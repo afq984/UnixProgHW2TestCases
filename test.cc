@@ -18,9 +18,9 @@
 const int ESBX = EACCES;
 
 // the errno the sandbox should set when an outside file cannot be resolved
-// I believe EACCES should be the correct answer but it is too complicated to
-// implement for now.
-const int ESBXNOENT = ENOENT;
+// EACCES should be the correct answer
+// ENOENT is the lazy one
+const int ESBXNOENT = ESBX;
 
 char basedir[PATH_MAX];
 
