@@ -333,6 +333,22 @@ TEST_F(CreatW, LinkExists) {
     EXPECT_OK(-1, creat("l1", 0644));
 }
 
+TEST_F(CreatW, ParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, creat("..", 0644));
+}
+
+TEST_F(CreatW, EffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, creat("dempty/../..", 0644));
+}
+
+TEST_F(CreatW, InParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, creat(mktemp(strdupa("../testXXXXXX")), 0644));
+}
+
+TEST_F(CreatW, InEffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, creat(mktemp(strdupa("dempty/../../testXXXXXX")), 0644));
+}
+
 TEST_F(CreatW, Outside) {
     EXPECT_ERRNO(ESBX, -1, creat(mktemp(strdupa("/tmp/creatXXXXXX")), 0644));
 }
@@ -381,6 +397,22 @@ TEST_F(FopenW, LinkExists) {
     EXPECT_OK((FILE *)nullptr, fopen("l1", "w"));
 }
 
+TEST_F(FopenW, ParentDirectory) {
+    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("..", "w"));
+}
+
+TEST_F(FopenW, EffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("dempty/../..", "w"));
+}
+
+TEST_F(FopenW, InParentDirectory) {
+    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen(mktemp(strdupa("../testXXXXXX")), "w"));
+}
+
+TEST_F(FopenW, InEffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen(mktemp(strdupa("dempty/../../testXXXXXX")), "w"));
+}
+
 TEST_F(FopenW, Outside) {
     EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen(mktemp(strdupa("/tmp/fopenXXXXXX")), "w"));
 }
@@ -427,6 +459,22 @@ TEST_F(FopenA, LinkExists) {
     EXPECT_OK((FILE *)nullptr, fopen("l1", "a"));
 }
 
+TEST_F(FopenA, ParentDirectory) {
+    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("..", "a"));
+}
+
+TEST_F(FopenA, EffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("dempty/../..", "a"));
+}
+
+TEST_F(FopenA, InParentDirectory) {
+    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen(mktemp(strdupa("../testXXXXXX")), "a"));
+}
+
+TEST_F(FopenA, InEffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen(mktemp(strdupa("dempty/../../testXXXXXX")), "a"));
+}
+
 TEST_F(FopenA, Outside) {
     EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("/tmp/fopen-outside", "a"));
 }
@@ -461,6 +509,22 @@ TEST_F(FopenR, Exists) {
 TEST_F(FopenR, LinkExists) {
     EXPECT_OK((FILE *)nullptr, fopen("l0", "r"));
     EXPECT_OK((FILE *)nullptr, fopen("l1", "r"));
+}
+
+TEST_F(FopenR, ParentDirectory) {
+    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("..", "r"));
+}
+
+TEST_F(FopenR, EffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("dempty/../..", "r"));
+}
+
+TEST_F(FopenR, InParentDirectoryDoesNotExist) {
+    EXPECT_ERRNO(ESBXNOENT, (FILE *)nullptr, fopen(mktemp(strdupa("../testXXXXXX")), "r"));
+}
+
+TEST_F(FopenR, InEffectiveParentDirectoryDoesNotExist) {
+    EXPECT_ERRNO(ESBXNOENT, (FILE *)nullptr, fopen(mktemp(strdupa("dempty/../../testXXXXXX")), "r"));
 }
 
 TEST_F(FopenR, Outside) {
@@ -546,6 +610,22 @@ TEST_F(OpenW, LinkExistsExcl) {
     EXPECT_ERRNO(EEXIST, -1, open("l1", O_CREAT | O_WRONLY | O_EXCL, 0644));
 }
 
+TEST_F(OpenW, ParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, open("..", O_CREAT | O_WRONLY, 0644));
+}
+
+TEST_F(OpenW, EffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, open("dempty/../..", O_CREAT | O_WRONLY, 0644));
+}
+
+TEST_F(OpenW, InParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, open(mktemp(strdupa("../testXXXXXX")), O_CREAT | O_WRONLY, 0644));
+}
+
+TEST_F(OpenW, InEffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, open(mktemp(strdupa("dempty/../../testXXXXXX")), O_CREAT | O_WRONLY, 0644));
+}
+
 TEST_F(OpenW, Outside) {
     EXPECT_ERRNO(
         ESBX, -1,
@@ -584,6 +664,22 @@ TEST_F(OpenR, Exists) {
 TEST_F(OpenR, LinkExists) {
     EXPECT_OK(-1, open("l0", O_RDONLY));
     EXPECT_OK(-1, open("l1", O_RDONLY));
+}
+
+TEST_F(OpenR, ParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, open("..", O_RDONLY));
+}
+
+TEST_F(OpenR, EffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, open("dempty/../..", O_RDONLY));
+}
+
+TEST_F(OpenR, InParentDirectory) {
+    EXPECT_ERRNO(ESBXNOENT, -1, open(mktemp(strdupa("../testXXXXXX")), O_RDONLY));
+}
+
+TEST_F(OpenR, InEffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBXNOENT, -1, open(mktemp(strdupa("dempty/../../testXXXXXX")), O_RDONLY));
 }
 
 TEST_F(OpenR, Outside) {
@@ -646,6 +742,22 @@ TEST_F(OpenAtW, LinkExistsExcl) {
     EXPECT_ERRNO(EEXIST, -1, openat(AT_FDCWD, "l1", O_CREAT | O_WRONLY | O_EXCL, 0644));
 }
 
+TEST_F(OpenAtW, ParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(AT_FDCWD, "..", O_CREAT | O_WRONLY, 0644));
+}
+
+TEST_F(OpenAtW, EffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(AT_FDCWD, "dempty/../..", O_CREAT | O_WRONLY, 0644));
+}
+
+TEST_F(OpenAtW, InParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(AT_FDCWD, mktemp(strdupa("../testXXXXXX")), O_CREAT | O_WRONLY, 0644));
+}
+
+TEST_F(OpenAtW, InEffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(AT_FDCWD, mktemp(strdupa("dempty/../../testXXXXXX")), O_CREAT | O_WRONLY, 0644));
+}
+
 TEST_F(OpenAtW, Outside) {
     EXPECT_ERRNO(
         ESBX, -1,
@@ -682,6 +794,22 @@ TEST_F(OpenAtR, Exists) {
 TEST_F(OpenAtR, LinkExists) {
     EXPECT_OK(-1, openat(AT_FDCWD, "l0", O_RDONLY));
     EXPECT_OK(-1, openat(AT_FDCWD, "l1", O_RDONLY));
+}
+
+TEST_F(OpenAtR, ParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(AT_FDCWD, "..", O_RDONLY));
+}
+
+TEST_F(OpenAtR, EffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(AT_FDCWD, "dempty/../..", O_RDONLY));
+}
+
+TEST_F(OpenAtR, InParentDirectoryDoesNotExist) {
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(AT_FDCWD, mktemp(strdupa("../testXXXXXX")), O_RDONLY));
+}
+
+TEST_F(OpenAtR, InEffectiveParentDirectoryDoesNotExist) {
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(AT_FDCWD, mktemp(strdupa("dempty/../../testXXXXXX")), O_RDONLY));
 }
 
 TEST_F(OpenAtR, Outside) {
@@ -759,6 +887,22 @@ TEST_F(OpenAtTestRootW, LinkExistsExcl) {
     EXPECT_ERRNO(EEXIST, -1, openat(at_troot, "l1", O_CREAT | O_WRONLY | O_EXCL, 0644));
 }
 
+TEST_F(OpenAtTestRootW, ParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(at_troot, "..", O_CREAT | O_WRONLY, 0644));
+}
+
+TEST_F(OpenAtTestRootW, EffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(at_troot, "dempty/../..", O_CREAT | O_WRONLY, 0644));
+}
+
+TEST_F(OpenAtTestRootW, InParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(at_troot, mktemp(strdupa("../testXXXXXX")), O_CREAT | O_WRONLY, 0644));
+}
+
+TEST_F(OpenAtTestRootW, InEffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(at_troot, mktemp(strdupa("dempty/../../testXXXXXX")), O_CREAT | O_WRONLY, 0644));
+}
+
 TEST_F(OpenAtTestRootW, Outside) {
     EXPECT_ERRNO(ESBX, -1, openat(at_troot, mktemp(strdupa("/tmp/open-outsideXXXXXX")), O_CREAT | O_WRONLY, 0644));
 }
@@ -793,6 +937,22 @@ TEST_F(OpenAtTestRootR, Exists) {
 TEST_F(OpenAtTestRootR, LinkExists) {
     EXPECT_OK(-1, openat(at_troot, "l0", O_RDONLY));
     EXPECT_OK(-1, openat(at_troot, "l1", O_RDONLY));
+}
+
+TEST_F(OpenAtTestRootR, ParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(at_troot, "..", O_RDONLY));
+}
+
+TEST_F(OpenAtTestRootR, EffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(at_troot, "dempty/../..", O_RDONLY));
+}
+
+TEST_F(OpenAtTestRootR, InParentDirectoryDoesNotExist) {
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(at_troot, mktemp(strdupa("../testXXXXXX")), O_RDONLY));
+}
+
+TEST_F(OpenAtTestRootR, InEffectiveParentDirectoryDoesNotExist) {
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(at_troot, mktemp(strdupa("dempty/../../testXXXXXX")), O_RDONLY));
 }
 
 TEST_F(OpenAtTestRootR, Outside) {
@@ -869,6 +1029,22 @@ TEST_F(OpenAtSubDirW, LinkExistsExcl) {
     EXPECT_ERRNO(EEXIST, -1, openat(at_subd, "../l1", O_CREAT | O_WRONLY | O_EXCL, 0644));
 }
 
+TEST_F(OpenAtSubDirW, ParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(at_subd, "../..", O_CREAT | O_WRONLY, 0644));
+}
+
+TEST_F(OpenAtSubDirW, EffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(at_subd, "../dmpty/../..", O_CREAT | O_WRONLY, 0644));
+}
+
+TEST_F(OpenAtSubDirW, InParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(at_subd, mktemp(strdupa("../../testXXXXXX")), O_CREAT | O_WRONLY, 0644));
+}
+
+TEST_F(OpenAtSubDirW, InEffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(at_subd, mktemp(strdupa("../dempty/../../testXXXXXX")), O_CREAT | O_WRONLY, 0644));
+}
+
 TEST_F(OpenAtSubDirW, NormalOperation) {
     EXPECT_OK(-1, openat(at_subd, "../x", O_CREAT | O_WRONLY, 0644));
 }
@@ -907,6 +1083,22 @@ TEST_F(OpenAtSubDirR, LinkOutsideDoesNotExist) {
 
 TEST_F(OpenAtSubDirR, DoesNotExist) {
     EXPECT_ERRNO(ENOENT, -1, openat(at_subd, "../x", O_RDONLY));
+}
+
+TEST_F(OpenAtSubDirR, ParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(at_subd, "../..", O_RDONLY));
+}
+
+TEST_F(OpenAtSubDirR, EffectiveParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, openat(at_subd, "../dempty/../..", O_RDONLY));
+}
+
+TEST_F(OpenAtSubDirR, InParentDirectoryDoesNotExist) {
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(at_subd, mktemp(strdupa("../../testXXXXXX")), O_RDONLY));
+}
+
+TEST_F(OpenAtSubDirR, InEffectiveParentDirectoryDoesNotExist) {
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(at_subd, mktemp(strdupa("../dempty/../../testXXXXXX")), O_RDONLY));
 }
 
 TEST_F(OpenAtSubDirR, NormalOperationOnLink) {
