@@ -1168,6 +1168,53 @@ TEST_F(Rmdir, OutsideDoesNotExist) {
     EXPECT_ERRNO(ESBXNOENT, -1, rmdir("/does/not/exist"));
 }
 
+class Unlink : public SandboxTest {};
+
+TEST_F(Unlink, File) {
+    EXPECT_ERRNO(0, 0, unlink("f0"));
+    EXPECT_ERRNO(ENOENT, -1, libc_unlink("f0"));
+}
+
+TEST_F(Unlink, Directory) {
+    EXPECT_ERRNO(EISDIR, -1, unlink("dempty"));
+}
+
+TEST_F(Unlink, DirectoryNotEmpty) {
+    EXPECT_ERRNO(EISDIR, -1, unlink("dhasfile"));
+}
+
+TEST_F(Unlink, LinkToFile) {
+    EXPECT_ERRNO(0, 0, unlink("l0"));
+    EXPECT_ERRNO(0, 0, libc_symlink("so the symlink has been unlinkd", "l0"));
+}
+
+TEST_F(Unlink, LinkToDirectory) {
+    EXPECT_ERRNO(0, 0, unlink("ldhasfile"));
+    EXPECT_ERRNO(0, 0, libc_symlink("so the symlink has been unlinkd", "ldhasfile"));
+}
+
+TEST_F(Unlink, LinkToRoot) {
+    EXPECT_ERRNO(0, 0, unlink("lroot"));
+    EXPECT_ERRNO(0, 0, libc_symlink("so the symlink has been unlinkd", "lroot"));
+}
+
+TEST_F(Unlink, LinkToBinSh) {
+    EXPECT_ERRNO(0, 0, unlink("lsh"));
+    EXPECT_ERRNO(0, 0, libc_symlink("so the symlink has been unlinkd", "lsh"));
+}
+
+TEST_F(Unlink, Root) {
+    EXPECT_ERRNO(ESBX, -1, unlink("/"));
+}
+
+TEST_F(Unlink, DoesNotExist) {
+    EXPECT_ERRNO(ENOENT, -1, unlink("does-not-exist"));
+}
+
+TEST_F(Unlink, DoesNotExistOutside) {
+    EXPECT_ERRNO(ESBXNOENT, -1, unlink("/does/not/exist"));
+}
+
 class Exec : public SandboxTest {};
 
 char fail_msg[] = "ERROR: EXEC BYPASSED SANDBOX";
