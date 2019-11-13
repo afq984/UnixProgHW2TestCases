@@ -63,6 +63,7 @@ libc_decl(chdir);
 libc_decl(mkdir);
 libc_decl(rmdir);
 libc_decl(remove);
+libc_decl(rename);
 
 #define EXPECT_MAYBE_ERRNO(e, op)                                                           \
     do {                                                                                    \
@@ -1026,6 +1027,90 @@ TEST_F(Readlink, OutsideDoesNotExist) {
 
 TEST_F(Readlink, OutsideRelativeDoesNotExist) {
     EXPECT_ERRNO(ESBXNOENT, -1, readlink("../does/not/exist", buf, PATH_MAX));
+}
+
+class Remove : public SandboxTest {};
+
+TEST_F(Remove, File) {
+    EXPECT_ERRNO(0, 0, remove("f0"));
+    EXPECT_ERRNO(ENOENT, -1, libc_remove("f0"));
+}
+
+TEST_F(Remove, Directory) {
+    EXPECT_ERRNO(0, 0, remove("dempty"));
+    EXPECT_ERRNO(ENOENT, -1, libc_remove("dempty"));
+}
+
+TEST_F(Remove, DirectoryNotEmpty) {
+    EXPECT_ERRNO(ENOTEMPTY, -1, remove("dhasfile"));
+}
+
+TEST_F(Remove, LinkToFile) {
+    EXPECT_ERRNO(0, 0, remove("l0"));
+    EXPECT_ERRNO(0, 0, libc_symlink("so the symlink has been removed", "l0"));
+}
+
+TEST_F(Remove, LinkToDirectory) {
+    EXPECT_ERRNO(0, 0, remove("ldhasfile"));
+    EXPECT_ERRNO(0, 0, libc_symlink("so the symlink has been removed", "ldhasfile"));
+}
+
+TEST_F(Remove, LinkToRoot) {
+    EXPECT_ERRNO(0, 0, remove("lroot"));
+    EXPECT_ERRNO(0, 0, libc_symlink("so the symlink has been removed", "lroot"));
+}
+
+TEST_F(Remove, LinkToBinSh) {
+    EXPECT_ERRNO(0, 0, remove("lsh"));
+    EXPECT_ERRNO(0, 0, libc_symlink("so the symlink has been removed", "lsh"));
+}
+
+TEST_F(Remove, Root) {
+    EXPECT_ERRNO(ESBX, -1, remove("/"));
+}
+
+class Rename : public SandboxTest {};
+
+TEST_F(Rename, File) {
+    EXPECT_ERRNO(0, 0, rename("f0", "x"));
+    EXPECT_ERRNO(0, 0, libc_unlink("x"));
+}
+
+TEST_F(Rename, FileInDir) {
+    EXPECT_ERRNO(0, 0, rename("dhasfile/f1", "x"));
+    EXPECT_ERRNO(0, 0, libc_unlink("x"));
+}
+
+TEST_F(Rename, SymlinkToFile) {
+    EXPECT_ERRNO(0, 0, rename("l0", "x"));
+    EXPECT_ERRNO(0, 0, libc_unlink("f0"));
+}
+
+TEST_F(Rename, SymlinkToDir) {
+    EXPECT_ERRNO(0, 0, rename("ldempty", "x"));
+    EXPECT_ERRNO(0, 0, libc_rmdir("dempty"));
+}
+
+TEST_F(Rename, Outside) {
+    EXPECT_ERRNO(ESBX, -1, rename("f0", mktemp(strdupa("/tmp/testXXXXXX"))));
+}
+
+TEST_F(Rename, OutsideDeep) {
+    EXPECT_ERRNO(ESBXNOENT, -1, rename("f0", "/tmp/does/not/exist"));
+}
+
+TEST_F(Rename, Directory) {
+    EXPECT_ERRNO(0, 0, rename("dhasfile", "x"));
+    EXPECT_ERRNO(EISDIR, -1, libc_unlink("x"));
+    EXPECT_ERRNO(0, 0, libc_rename("x", "dhasfile"));
+}
+
+TEST_F(Rename, FromOutside) {
+    EXPECT_ERRNO(ESBX, -1, rename("/bin/sh", "x"));
+}
+
+TEST_F(Rename, FromOutSideDoesNotExist) {
+    EXPECT_ERRNO(ESBXNOENT, -1, rename("/does/not/exist", "x"));
 }
 
 class Exec : public SandboxTest {};
