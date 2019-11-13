@@ -981,12 +981,51 @@ TEST_F(Opendir, LinkOutsideDoesNotExist) {
     EXPECT_ERRNO(ESBXNOENT, (DIR *)nullptr, opendir("ltmp"));
 }
 
-class Readlink : public SandboxTest {};
-
-TEST_F(Readlink, ActualLink) {
+class Readlink : public SandboxTest {
+  protected:
     char buf[PATH_MAX];
+};
+
+TEST_F(Readlink, Link) {
     EXPECT_ERRNO(0, 2, readlink("l0", buf, PATH_MAX));
     EXPECT_EQ("f0", std::string(buf, 2));
+}
+
+TEST_F(Readlink, LinkOutside) {
+    EXPECT_ERRNO(0, 1, readlink("lroot", buf, PATH_MAX));
+    EXPECT_EQ("/", std::string(buf, 1));
+}
+
+TEST_F(Readlink, OutsideLink) {
+    EXPECT_ERRNO(ESBX, -1, readlink("/bin/sh", buf, PATH_MAX));
+}
+
+TEST_F(Readlink, File) {
+    EXPECT_ERRNO(EINVAL, -1, readlink("f0", buf, PATH_MAX));
+}
+
+TEST_F(Readlink, Directory) {
+    EXPECT_ERRNO(EINVAL, -1, readlink("dhasfile", buf, PATH_MAX));
+}
+
+TEST_F(Readlink, CWD) {
+    EXPECT_ERRNO(EINVAL, -1, readlink(".", buf, PATH_MAX));
+}
+
+TEST_F(Readlink, ParentDirectory) {
+    EXPECT_ERRNO(ESBX, -1, readlink("..", buf, PATH_MAX));
+}
+
+TEST_F(Readlink, Root) {
+    EXPECT_ERRNO(ESBX, -1, readlink("/", buf, PATH_MAX));
+}
+
+TEST_F(Readlink, OutsideDoesNotExist) {
+    EXPECT_ERRNO(ESBXNOENT, -1, readlink("/does/not/exist", buf, PATH_MAX));
+}
+
+TEST_F(Readlink, OutsideRelativeDoesNotExist) {
+    EXPECT_ERRNO(ESBXNOENT, -1, readlink("../does/not/exist", buf, PATH_MAX));
 }
 
 class Exec : public SandboxTest {};
