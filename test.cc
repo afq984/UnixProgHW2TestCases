@@ -1036,7 +1036,7 @@ TEST_F(Remove, File) {
     EXPECT_ERRNO(ENOENT, -1, libc_remove("f0"));
 }
 
-TEST_F(Remove, Directory) {
+TEST_F(Remove, DISABLED_Directory) {
     EXPECT_ERRNO(0, 0, remove("dempty"));
     EXPECT_ERRNO(ENOENT, -1, libc_remove("dempty"));
 }
