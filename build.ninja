@@ -1,0 +1,10 @@
+cxx = g++
+cxxflags = -lgtest -lgtest_main -ldl
+
+rule compile
+  command = $cxx -o $out $cxxflags $in
+
+build test: compile test.cc
+
+build test64: compile test.cc
+  cxxflags = $cxxflags -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
