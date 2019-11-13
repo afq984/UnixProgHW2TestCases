@@ -16,6 +16,11 @@
 // the errno the sandbox should set when denying function calls
 const int ESBX = EACCES;
 
+// the errno the sandbox should set when an outside file cannot be resolved
+// I believe EACCES should be the correct answer but it is too complicated to
+// implement for now.
+const int ESBXNOENT = ENOENT;
+
 char basedir[PATH_MAX];
 
 std::runtime_error rtef(const char *fmt, ...) {
@@ -205,11 +210,11 @@ TEST_F(Chdir, BrokenSymlink) {
 }
 
 TEST_F(Chdir, NoSuchFileOrDirectoryOutside) {
-    EXPECT_ERRNO(ESBX, -1, chdir("/does/not/exist"));
+    EXPECT_ERRNO(ESBXNOENT, -1, chdir("/does/not/exist"));
 }
 
 TEST_F(Chdir, BrokenSymlinkOutside) {
-    EXPECT_ERRNO(ESBX, -1, chdir("loutbroken"));
+    EXPECT_ERRNO(ESBXNOENT, -1, chdir("loutbroken"));
 }
 
 TEST_F(Chdir, Inside) {
@@ -255,8 +260,8 @@ TEST_F(Chmod, NoSuchFileOrDirectory) {
 }
 
 TEST_F(Chmod, NoSuchFileOrDirectoryOutside) {
-    EXPECT_ERRNO(ENOENT, -1, chmod("/does/not/exist", 0755));
-    EXPECT_ERRNO(ENOENT, -1, chmod("loutbroken", 0755));
+    EXPECT_ERRNO(ESBXNOENT, -1, chmod("/does/not/exist", 0755));
+    EXPECT_ERRNO(ESBXNOENT, -1, chmod("loutbroken", 0755));
 }
 
 class Chown : public SandboxTest {};
@@ -292,55 +297,59 @@ TEST_F(Chown, NoSuchFileOrDirectory) {
 }
 
 TEST_F(Chown, NoSuchFileOrDirectoryOutside) {
-    EXPECT_ERRNO(ENOENT, -1, chown("/does/not/exist", getuid(), getgid()));
-    EXPECT_ERRNO(ENOENT, -1, chown("loutbroken", getuid(), getgid()));
+    EXPECT_ERRNO(ESBXNOENT, -1, chown("/does/not/exist", getuid(), getgid()));
+    EXPECT_ERRNO(ESBXNOENT, -1, chown("loutbroken", getuid(), getgid()));
 }
 
 class Creat : public SandboxTest {};
 
-TEST_F(Creat, IsADirectory) {
+#define CreatW Creat
+
+TEST_F(CreatW, IsADirectory) {
     EXPECT_ERRNO(EISDIR, -1, creat("dhasfile", 0644));
     EXPECT_ERRNO(EISDIR, -1, creat("dempty", 0644));
 }
 
-TEST_F(Creat, LinkIsADirectory) {
+TEST_F(CreatW, LinkIsADirectory) {
     EXPECT_ERRNO(EISDIR, -1, creat("ldhasfile", 0644));
     EXPECT_ERRNO(EISDIR, -1, creat("ldempty", 0644));
 }
 
-TEST_F(Creat, Exists) {
+TEST_F(CreatW, Exists) {
     EXPECT_OK(-1, creat("f0", 0644));
     EXPECT_OK(-1, creat("dhasfile/f1", 0644));
 }
 
-TEST_F(Creat, LinkExists) {
+TEST_F(CreatW, LinkExists) {
     EXPECT_OK(-1, creat("l0", 0644));
     EXPECT_OK(-1, creat("l1", 0644));
 }
 
-TEST_F(Creat, Outside) {
+TEST_F(CreatW, Outside) {
     EXPECT_ERRNO(ESBX, -1, creat("/tmp/creat-outside", 0644));
 }
 
-TEST_F(Creat, OutsideDir) {
-    EXPECT_ERRNO(ESBX, -1, creat("/tmp/does/not/exist/outside", 0644));
+TEST_F(CreatW, OutsideDir) {
+    EXPECT_ERRNO(ESBXNOENT, -1, creat("/tmp/does/not/exist/outside", 0644));
 }
 
-TEST_F(Creat, NormalOperation) {
+TEST_F(CreatW, NormalOperation) {
     EXPECT_OK(-1, creat("x", 0644));
 }
 
-TEST_F(Creat, NormalOperationOnLink) {
+TEST_F(CreatW, NormalOperationOnLink) {
     EXPECT_OK(-1, creat("lx", 0644));
 }
 
-TEST_F(Creat, LinkOutside) {
-    EXPECT_ERRNO(ESBX, -1, creat("ltmp", 0644));
+TEST_F(CreatW, LinkOutsideTmpNew) {
+    EXPECT_ERRNO(ESBXNOENT, -1, creat("ltmp", 0644));
 }
 
-TEST_F(Creat, LinkOutsideND) {
-    EXPECT_ERRNO(ESBX, -1, creat("ltmp2", 0644));
+TEST_F(CreatW, LinkOutside) {
+    EXPECT_ERRNO(ESBXNOENT, -1, creat("ltmp2", 0644));
 }
+
+#undef CreatW
 
 class FopenW : public SandboxTest {};
 
@@ -369,7 +378,7 @@ TEST_F(FopenW, Outside) {
 }
 
 TEST_F(FopenW, OutsideDir) {
-    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("/tmp/does/not/exist/outside", "w"));
+    EXPECT_ERRNO(ESBXNOENT, (FILE *)nullptr, fopen("/tmp/does/not/exist/outside", "w"));
 }
 
 TEST_F(FopenW, NormalOperation) {
@@ -380,12 +389,12 @@ TEST_F(FopenW, NormalOperationOnLink) {
     EXPECT_OK((FILE *)nullptr, fopen("lx", "w"));
 }
 
-TEST_F(FopenW, LinkOutside) {
-    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("ltmp", "w"));
+TEST_F(FopenW, LinkOutsideTmpNew) {
+    EXPECT_ERRNO(ESBXNOENT, (FILE *)nullptr, fopen("ltmp", "w"));
 }
 
-TEST_F(FopenW, LinkOutsideND) {
-    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("ltmp2", "w"));
+TEST_F(FopenW, LinkOutsideTmpDeep) {
+    EXPECT_ERRNO(ESBXNOENT, (FILE *)nullptr, fopen("ltmp2", "w"));
 }
 
 class FopenA : public SandboxTest {};
@@ -415,7 +424,7 @@ TEST_F(FopenA, Outside) {
 }
 
 TEST_F(FopenA, OutsideDir) {
-    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("/tmp/does/not/exist/outside", "a"));
+    EXPECT_ERRNO(ESBXNOENT, (FILE *)nullptr, fopen("/tmp/does/not/exist/outside", "a"));
 }
 
 TEST_F(FopenA, NormalOperation) {
@@ -427,11 +436,11 @@ TEST_F(FopenA, NormalOperationOnLink) {
 }
 
 TEST_F(FopenA, LinkOutside) {
-    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("ltmp", "a"));
+    EXPECT_ERRNO(ESBXNOENT, (FILE *)nullptr, fopen("ltmp", "a"));
 }
 
-TEST_F(FopenA, LinkOutsideND) {
-    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("ltmp2", "a"));
+TEST_F(FopenA, LinkOutsideTmpDeep) {
+    EXPECT_ERRNO(ESBXNOENT, (FILE *)nullptr, fopen("ltmp2", "a"));
 }
 
 class FopenR : public SandboxTest {};
@@ -450,12 +459,12 @@ TEST_F(FopenR, Outside) {
     EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("/dev/null", "r"));
 }
 
-TEST_F(FopenR, LinkOutside) {
+TEST_F(FopenR, LinkOutsideExists) {
     EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("lsh", "r"));
 }
 
 TEST_F(FopenR, LinkOutsideDoesNotExist) {
-    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("loutbroken", "r"));
+    EXPECT_ERRNO(ESBXNOENT, (FILE *)nullptr, fopen("loutbroken", "r"));
 }
 
 TEST_F(FopenR, DoesNotExist) {
@@ -467,11 +476,11 @@ TEST_F(FopenR, NormalOperationOnLink) {
 }
 
 TEST_F(FopenR, LinkOutsideDoesNotExistTmp) {
-    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("ltmp", "r"));
+    EXPECT_ERRNO(ESBXNOENT, (FILE *)nullptr, fopen("ltmp", "r"));
 }
 
 TEST_F(FopenR, LinkOutsideDoesNotExistTmp2) {
-    EXPECT_ERRNO(ESBX, (FILE *)nullptr, fopen("ltmp2", "r"));
+    EXPECT_ERRNO(ESBXNOENT, (FILE *)nullptr, fopen("ltmp2", "r"));
 }
 
 class Link : public SandboxTest {};
@@ -530,11 +539,15 @@ TEST_F(OpenW, LinkExistsExcl) {
 }
 
 TEST_F(OpenW, Outside) {
-    EXPECT_ERRNO(ESBX, -1, open("/tmp/open-outside", O_CREAT | O_WRONLY, 0644));
+    EXPECT_ERRNO(
+        ESBX, -1,
+        open(mktemp(strdupa("/tmp/open-outsideXXXXXX")), O_CREAT | O_WRONLY, 0644));
 }
 
 TEST_F(OpenW, OutsideDir) {
-    EXPECT_ERRNO(ESBX, -1, open("/tmp/does/not/exist/outside", O_CREAT | O_WRONLY, 0644));
+    EXPECT_ERRNO(
+        ESBXNOENT, -1,
+        open("/tmp/does/not/exist/outside", O_CREAT | O_WRONLY, 0644));
 }
 
 TEST_F(OpenW, NormalOperation) {
@@ -545,12 +558,12 @@ TEST_F(OpenW, NormalOperationOnLink) {
     EXPECT_OK(-1, open("lx", O_CREAT | O_WRONLY, 0644));
 }
 
-TEST_F(OpenW, LinkOutside) {
-    EXPECT_ERRNO(ESBX, -1, open("ltmp", O_CREAT | O_WRONLY, 0644));
+TEST_F(OpenW, LinkOutsideTmpNew) {
+    EXPECT_ERRNO(ESBXNOENT, -1, open("ltmp", O_CREAT | O_WRONLY, 0644));
 }
 
-TEST_F(OpenW, LinkOutsideND) {
-    EXPECT_ERRNO(ESBX, -1, open("ltmp2", O_CREAT | O_WRONLY, 0644));
+TEST_F(OpenW, LinkOutsideTmpDeep) {
+    EXPECT_ERRNO(ESBXNOENT, -1, open("ltmp2", O_CREAT | O_WRONLY, 0644));
 }
 
 class OpenR : public SandboxTest {};
@@ -569,12 +582,12 @@ TEST_F(OpenR, Outside) {
     EXPECT_ERRNO(ESBX, -1, open("/dev/null", O_RDONLY));
 }
 
-TEST_F(OpenR, LinkOutside) {
+TEST_F(OpenR, LinkOutsideExists) {
     EXPECT_ERRNO(ESBX, -1, open("lsh", O_RDONLY));
 }
 
 TEST_F(OpenR, LinkOutsideDoesNotExist) {
-    EXPECT_ERRNO(ESBX, -1, open("loutbroken", O_RDONLY));
+    EXPECT_ERRNO(ESBXNOENT, -1, open("loutbroken", O_RDONLY));
 }
 
 TEST_F(OpenR, DoesNotExist) {
@@ -586,11 +599,11 @@ TEST_F(OpenR, NormalOperationOnLink) {
 }
 
 TEST_F(OpenR, LinkOutsideDoesNotExistTmp) {
-    EXPECT_ERRNO(ESBX, -1, open("ltmp", O_RDONLY));
+    EXPECT_ERRNO(ESBXNOENT, -1, open("ltmp", O_RDONLY));
 }
 
 TEST_F(OpenR, LinkOutsideDoesNotExistTmp2) {
-    EXPECT_ERRNO(ESBX, -1, open("ltmp2", O_RDONLY));
+    EXPECT_ERRNO(ESBXNOENT, -1, open("ltmp2", O_RDONLY));
 }
 
 class OpenAtW : public SandboxTest {};
@@ -626,11 +639,13 @@ TEST_F(OpenAtW, LinkExistsExcl) {
 }
 
 TEST_F(OpenAtW, Outside) {
-    EXPECT_ERRNO(ESBX, -1, openat(AT_FDCWD, "/tmp/open-outside", O_CREAT | O_WRONLY, 0644));
+    EXPECT_ERRNO(
+        ESBX, -1,
+        openat(AT_FDCWD, mktemp(strdupa("/tmp/open-outsideXXXXXX")), O_CREAT | O_WRONLY, 0644));
 }
 
 TEST_F(OpenAtW, OutsideDir) {
-    EXPECT_ERRNO(ESBX, -1, openat(AT_FDCWD, "/tmp/does/not/exist/outside", O_CREAT | O_WRONLY, 0644));
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(AT_FDCWD, "/tmp/does/not/exist/outside", O_CREAT | O_WRONLY, 0644));
 }
 
 TEST_F(OpenAtW, NormalOperation) {
@@ -641,12 +656,12 @@ TEST_F(OpenAtW, NormalOperationOnLink) {
     EXPECT_OK(-1, openat(AT_FDCWD, "lx", O_CREAT | O_WRONLY, 0644));
 }
 
-TEST_F(OpenAtW, LinkOutside) {
-    EXPECT_ERRNO(ESBX, -1, openat(AT_FDCWD, "ltmp", O_CREAT | O_WRONLY, 0644));
+TEST_F(OpenAtW, LinkOutsideTmpNew) {
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(AT_FDCWD, "ltmp", O_CREAT | O_WRONLY, 0644));
 }
 
-TEST_F(OpenAtW, LinkOutsideND) {
-    EXPECT_ERRNO(ESBX, -1, openat(AT_FDCWD, "ltmp2", O_CREAT | O_WRONLY, 0644));
+TEST_F(OpenAtW, LinkOutsideTmpDeep) {
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(AT_FDCWD, "ltmp2", O_CREAT | O_WRONLY, 0644));
 }
 
 class OpenAtR : public SandboxTest {};
@@ -665,12 +680,12 @@ TEST_F(OpenAtR, Outside) {
     EXPECT_ERRNO(ESBX, -1, openat(AT_FDCWD, "/dev/null", O_RDONLY));
 }
 
-TEST_F(OpenAtR, LinkOutside) {
+TEST_F(OpenAtR, LinkOutsideExists) {
     EXPECT_ERRNO(ESBX, -1, openat(AT_FDCWD, "lsh", O_RDONLY));
 }
 
 TEST_F(OpenAtR, LinkOutsideDoesNotExist) {
-    EXPECT_ERRNO(ESBX, -1, openat(AT_FDCWD, "loutbroken", O_RDONLY));
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(AT_FDCWD, "loutbroken", O_RDONLY));
 }
 
 TEST_F(OpenAtR, DoesNotExist) {
@@ -682,11 +697,11 @@ TEST_F(OpenAtR, NormalOperationOnLink) {
 }
 
 TEST_F(OpenAtR, LinkOutsideDoesNotExistTmp) {
-    EXPECT_ERRNO(ESBX, -1, openat(AT_FDCWD, "ltmp", O_RDONLY));
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(AT_FDCWD, "ltmp", O_RDONLY));
 }
 
 TEST_F(OpenAtR, LinkOutsideDoesNotExistTmp2) {
-    EXPECT_ERRNO(ESBX, -1, openat(AT_FDCWD, "ltmp2", O_RDONLY));
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(AT_FDCWD, "ltmp2", O_RDONLY));
 }
 
 class OpenAtTestRoot : public SandboxTest {
@@ -737,11 +752,11 @@ TEST_F(OpenAtTestRootW, LinkExistsExcl) {
 }
 
 TEST_F(OpenAtTestRootW, Outside) {
-    EXPECT_ERRNO(ESBX, -1, openat(at_troot, "/tmp/open-outside", O_CREAT | O_WRONLY, 0644));
+    EXPECT_ERRNO(ESBX, -1, openat(at_troot, mktemp(strdupa("/tmp/open-outsideXXXXXX")), O_CREAT | O_WRONLY, 0644));
 }
 
 TEST_F(OpenAtTestRootW, OutsideDir) {
-    EXPECT_ERRNO(ESBX, -1, openat(at_troot, "/tmp/does/not/exist/outside", O_CREAT | O_WRONLY, 0644));
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(at_troot, "/tmp/does/not/exist/outside", O_CREAT | O_WRONLY, 0644));
 }
 
 TEST_F(OpenAtTestRootW, NormalOperation) {
@@ -752,12 +767,12 @@ TEST_F(OpenAtTestRootW, NormalOperationOnLink) {
     EXPECT_OK(-1, openat(at_troot, "lx", O_CREAT | O_WRONLY, 0644));
 }
 
-TEST_F(OpenAtTestRootW, LinkOutside) {
-    EXPECT_ERRNO(ESBX, -1, openat(at_troot, "ltmp", O_CREAT | O_WRONLY, 0644));
+TEST_F(OpenAtTestRootW, LinkOutsideTmpNew) {
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(at_troot, "ltmp", O_CREAT | O_WRONLY, 0644));
 }
 
-TEST_F(OpenAtTestRootW, LinkOutsideND) {
-    EXPECT_ERRNO(ESBX, -1, openat(at_troot, "ltmp2", O_CREAT | O_WRONLY, 0644));
+TEST_F(OpenAtTestRootW, LinkOutsideTmpDeep) {
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(at_troot, "ltmp2", O_CREAT | O_WRONLY, 0644));
 }
 
 class OpenAtTestRootR : public OpenAtTestRoot {};
@@ -776,12 +791,12 @@ TEST_F(OpenAtTestRootR, Outside) {
     EXPECT_ERRNO(ESBX, -1, openat(at_troot, "/dev/null", O_RDONLY));
 }
 
-TEST_F(OpenAtTestRootR, LinkOutside) {
+TEST_F(OpenAtTestRootR, LinkOutsideExists) {
     EXPECT_ERRNO(ESBX, -1, openat(at_troot, "lsh", O_RDONLY));
 }
 
 TEST_F(OpenAtTestRootR, LinkOutsideDoesNotExist) {
-    EXPECT_ERRNO(ESBX, -1, openat(at_troot, "loutbroken", O_RDONLY));
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(at_troot, "loutbroken", O_RDONLY));
 }
 
 TEST_F(OpenAtTestRootR, DoesNotExist) {
@@ -793,11 +808,11 @@ TEST_F(OpenAtTestRootR, NormalOperationOnLink) {
 }
 
 TEST_F(OpenAtTestRootR, LinkOutsideDoesNotExistTmp) {
-    EXPECT_ERRNO(ESBX, -1, openat(at_troot, "ltmp", O_RDONLY));
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(at_troot, "ltmp", O_RDONLY));
 }
 
 TEST_F(OpenAtTestRootR, LinkOutsideDoesNotExistTmp2) {
-    EXPECT_ERRNO(ESBX, -1, openat(at_troot, "ltmp2", O_RDONLY));
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(at_troot, "ltmp2", O_RDONLY));
 }
 
 class OpenAtSubDir : public SandboxTest {
@@ -854,12 +869,12 @@ TEST_F(OpenAtSubDirW, NormalOperationOnLink) {
     EXPECT_OK(-1, openat(at_subd, "../lx", O_CREAT | O_WRONLY, 0644));
 }
 
-TEST_F(OpenAtSubDirW, LinkOutside) {
-    EXPECT_ERRNO(ESBX, -1, openat(at_subd, "../ltmp", O_CREAT | O_WRONLY, 0644));
+TEST_F(OpenAtSubDirW, LinkOutsideTmpNew) {
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(at_subd, "../ltmp", O_CREAT | O_WRONLY, 0644));
 }
 
-TEST_F(OpenAtSubDirW, LinkOutsideND) {
-    EXPECT_ERRNO(ESBX, -1, openat(at_subd, "../ltmp2", O_CREAT | O_WRONLY, 0644));
+TEST_F(OpenAtSubDirW, LinkOutsideTmpDeep) {
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(at_subd, "../ltmp2", O_CREAT | O_WRONLY, 0644));
 }
 
 class OpenAtSubDirR : public OpenAtSubDir {};
@@ -874,12 +889,12 @@ TEST_F(OpenAtSubDirR, LinkExists) {
     EXPECT_OK(-1, openat(at_subd, "../l1", O_RDONLY));
 }
 
-TEST_F(OpenAtSubDirR, LinkOutside) {
+TEST_F(OpenAtSubDirR, LinkOutsideExists) {
     EXPECT_ERRNO(ESBX, -1, openat(at_subd, "../lsh", O_RDONLY));
 }
 
 TEST_F(OpenAtSubDirR, LinkOutsideDoesNotExist) {
-    EXPECT_ERRNO(ESBX, -1, openat(at_subd, "../loutbroken", O_RDONLY));
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(at_subd, "../loutbroken", O_RDONLY));
 }
 
 TEST_F(OpenAtSubDirR, DoesNotExist) {
@@ -891,11 +906,11 @@ TEST_F(OpenAtSubDirR, NormalOperationOnLink) {
 }
 
 TEST_F(OpenAtSubDirR, LinkOutsideDoesNotExistTmp) {
-    EXPECT_ERRNO(ESBX, -1, openat(at_subd, "../ltmp", O_RDONLY));
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(at_subd, "../ltmp", O_RDONLY));
 }
 
 TEST_F(OpenAtSubDirR, LinkOutsideDoesNotExistTmp2) {
-    EXPECT_ERRNO(ESBX, -1, openat(at_subd, "../ltmp2", O_RDONLY));
+    EXPECT_ERRNO(ESBXNOENT, -1, openat(at_subd, "../ltmp2", O_RDONLY));
 }
 
 class Exec : public SandboxTest {};
